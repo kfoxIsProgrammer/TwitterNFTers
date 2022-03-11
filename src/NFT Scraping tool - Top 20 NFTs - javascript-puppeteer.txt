@@ -1,0 +1,115 @@
+const puppeteer = require('puppeteer');
+
+(async() => {
+    // Open Browser/Page and customize details
+    const browser = await puppeteer.launch({args:
+        ['--start-maximized', '--disable-extensions', '--ignore-certificate-errors'], headless:false,
+         devtools: true });
+    const page = await browser.newPage();
+    page.setViewport({width: 1080, height: 1080});
+
+    // Direct the page to cryptoslam
+    await page.goto('http://cryptoslam.io', {waitUntil: 'domcontentloaded'});
+
+    // Click the "All Time" tab so take us to top NFTs of all time
+    const allTime_Tab = await page.evaluate(() => {
+        // Get element for "All Time" tab and find x,y coordinates
+        var allTimeButton = document.getElementsByClassName('sales-rankings-tab-link')[3];
+        const {x,y} = allTimeButton.parentElement.getBoundingClientRect();
+        return {x,y};
+    });
+
+    // Click x,y coordinates for "All Time" tab
+    page.mouse.click(allTime_Tab.x + 3, allTime_Tab.y + 3);
+
+    // Get names of top NFTs and urls for sales associated with them
+    const [NFTnames, sales] = await page.evaluate(() => {
+        // Use XPath to navigate to div container that hold top NFTs list
+        var topList = document.evaluate('//*[@id="sales-rankings-all"]/div/div[1]/div[2]', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+
+        // Grab all names of top NFTs 
+        var NFTnamesCollections = topList.getElementsByClassName("summary-sales-table__column-product-name");
+
+        var topNFTNames = [];
+        // Top 21 names
+        for(var nameIndex = 0; nameIndex <21; nameIndex++){
+            topNFTNames.push(NFTnamesCollections[nameIndex].innerText);
+        }
+
+        // Grab all url entries by Class name. NOTE: [0] = title, not first NFT
+        var urlLinks = topList.getElementsByClassName("summary-sales-table__column summary-sales-table__column-sales cursor-default");
+        
+        // Store urls to click in urlArray (Top 21)
+        var urlArray = [];
+        for (let i = 1; i<22; i++){
+            urlArray.push(urlLinks[i].querySelector('a').href);
+        }
+        return [topNFTNames, urlArray];
+    });
+
+    // Create variable to store all NFT data in
+    var combinedNFTData =[];
+
+    // Iterate through all the urls
+    for (var urlNum = 0; urlNum <4; urlNum++) {
+        // Open new Page for specific NFT sales page and wait for it to load
+        const NFTSalesPage = await browser.newPage();
+        NFTSalesPage.setViewport({width: 1080, height: 1080});
+        await NFTSalesPage.goto(sales[urlNum], {waitUntil: 'domcontentloaded'});
+        await NFTSalesPage.waitForSelector('tbody');
+
+        // Get info from descriptive table
+        var NFTinfo = await NFTSalesPage.evaluate((NFTnames, urlNum) => {
+            // Store table info in rows
+            const tableRows = document.querySelector('tbody').children;
+
+            // Variable to store 2D array of NFT info
+            var tableInfoArray = [];
+
+            // iterate through table rows (Don't scrape last row which is summary)
+            for(var row = 0; row < tableRows.length - 1; row++) {
+                // Varibale to momentarily store row info
+                var rowInfoArray = [];
+
+                // Add Name of NFT to row of collected data
+                rowInfoArray.push(NFTnames[urlNum]);
+                
+                // Iterate through the columns in this row and grab inner text
+                for(var col = 1; col <8; col++){
+                    // Get inner text from column
+                    var columnData = tableRows[row].children[col].innerText;
+                    
+                    // Remove commas
+                    columnData = columnData.replace(/,/g, '');
+
+                    // Add column info to rowInfoArray
+                    rowInfoArray.push(columnData);
+                }
+                // Add rowInfoArray to next tableInfoArray Entry
+                tableInfoArray.push(rowInfoArray);
+            }
+
+            return tableInfoArray;
+
+        }, NFTnames, urlNum);
+
+        combinedNFTData = combinedNFTData.concat(NFTinfo);
+
+        await NFTSalesPage.close();
+    }
+
+        // Open browser so that I can print to csv file. Doesn't matter where I goto
+        const NFTSalesPage = await browser.newPage();
+        NFTSalesPage.setViewport({width: 1080, height: 1080});
+        await NFTSalesPage.goto('https://www.google.com/', {waitUntil: 'domcontentloaded'});
+    
+        await NFTSalesPage.evaluate((combinedNFTData) => {
+            // Store info into csv file
+            // Note I used Stack Overflow as example. Ref Link: https://stackoverflow.com/questions/14964035/how-to-export-javascript-array-info-to-csv-on-client-side
+            let csvData = "data:text/csv;charset=utf-8," + combinedNFTData.map(e => e.join(",")).join("\n");
+        
+            var csvUri = encodeURI(csvData);
+            window.open(csvUri);
+        }, combinedNFTData);
+
+})();
