@@ -1,8 +1,7 @@
-*Instructions: Click on the raw button in the upper right hand corner of this box.  Copy and paste the template into the README.md document on your github.  Fill in the titles, information and links where prompted! Feel free to stray a bit to suit your project but try to stick to the format as closely as possible for consistency across DSWG projects.*
 
 # TwitterNFTers 4906 DataScience Project
 This project is a part of the TwitterNFTers The Impact of Twitter Posts that Reference NFT Collections on the Positive Price Action of Associated NFT Collections research project for SYSC 4906 Intro to Data Science Course. 
-#### -- Project Status: [Active, On-Hold, Completed]
+#### -- Project Status: [On-Hold]
 
 ## Project Intro/Objective
 The purpose of this project is determine if any relavent relationships could be gathered from analyzing NFT collection prices and Twitter Tweets that had been linked to those NFT collections. 
@@ -51,8 +50,8 @@ The second source of data came from twitter. Using Twitters API2, we scrapped fo
 
 #### Team Members:
 
-|Name     |     Github      | 
-|---------|-----------------|
+|Name /Github    |    
+|---------|
 |[Kevin Fox](https://github.com/kfoxIsProgrammer/)|
 |[Alana McKee]|
 |[Will Kohler]|
